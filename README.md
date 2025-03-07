@@ -2,7 +2,7 @@
 Kye is your ultimate weapon against broken processes.
 
 ### What ?
-Kye allows you to kill **ALL** the processes from an user, to completly eliminate the his existance.
+Kye allows you to kill **ALL** the processes from an user, to completly eliminate his existance.
 
 ### Installation
 Run this command on your linux / darwin operating system:
