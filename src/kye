@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# Display help
+usage() {
+    echo "Usage: kye [OPTION]... [USERNAME/UID]"
+    echo "Kill all processes of the specified user."
+    echo
+    echo "  --force               use SIGKILL instead of SIGTERM"
+    echo "  --no-preserve-me      allow killing your own session"
+    echo "  --help                display this help and exit"
+    echo "  --version             output version information and exit"
+    echo
+    echo "By default, kye sends SIGTERM to all processes of the specified user."
+    echo "If no user is specified, the current user is assumed."
+    echo
+    echo "To kill another user's processes, root privileges are required."
+    exit 0
+}
+
+version() {
+    echo "kye 1.0.0"
+    echo "Kill Your Existence - process termination utility"
+    exit 0
+}
+
+FORCE_KILL=false
+PRESERVE_ME=true
+TARGET_USER=""
+CURRENT_UID=$(id -u)
+
+if [[ $# -eq 0 ]]; then
+    usage
+fi
+
+for arg in "$@"; do
+    case $arg in
+        --help)
+            usage
+            ;;
+        --version)
+            version
+            ;;
+        --force)
+            FORCE_KILL=true
+            ;;
+        --no-preserve-me)
+            PRESERVE_ME=false
+            ;;
+        -*|--*)
+            echo "kye: unrecognized option '$arg'"
+            echo "Try 'kye --help' for more information."
+            exit 1
+            ;;
+        *)
+            if [[ -n "$TARGET_USER" ]]; then
+                echo "kye: too many arguments"
+                echo "Try 'kye --help' for more information."
+                exit 1
+            fi
+            TARGET_USER=$arg
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_USER" ]]; then
+    TARGET_USER=$USER
+fi
+
+if [[ "$TARGET_USER" =~ ^[0-9]+$ ]]; then
+    TARGET_UID=$TARGET_USER
+else
+    TARGET_UID=$(id -u "$TARGET_USER" 2>/dev/null)
+    if [[ -z "$TARGET_UID" ]]; then
+        echo "kye: cannot find user '$TARGET_USER'"
+        exit 1
+    fi
+fi
+
+if [[ "$TARGET_UID" -ne "$CURRENT_UID" && "$EUID" -ne 0 ]]; then
+    echo "kye: cannot kill other users: Permission denied"
+    exit 1
+fi
+
+if [[ "$TARGET_UID" -eq "$CURRENT_UID" && "$PRESERVE_ME" == true ]]; then
+    echo -e "\e[1;31m*** WARNING ***\e[0m"
+    echo -e "You are attempting to terminate your own session."
+    echo -e "This may result in a system logout or loss of unsaved work."
+    echo -e "To proceed, use \e[1;33m--no-preserve-me\e[0m."
+    exit 1
+fi
+
+SIGNAL="-15"
+if $FORCE_KILL; then
+    SIGNAL="-9"
+fi
+
+PIDS=$(pgrep -u "$TARGET_UID")
+
+if [[ -z "$PIDS" ]]; then
+    echo "kye: no processes found for user '$TARGET_USER'"
+    exit 0
+fi
+
+echo "kye: terminating processes for '$TARGET_USER'..."
+kill $SIGNAL $PIDS
+
+sleep 1

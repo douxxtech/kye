@@ -1,0 +1,22 @@
+#!/bin/bash
+
+INSTALL_DIR="/usr/local/bin"
+KYE_URL="https://raw.githubusercontent.com/douxxtech/kye/master/kye"
+KYE_PATH="$INSTALL_DIR/kye"
+
+if [[ $EUID -ne 0 ]]; then
+    echo "This installer requires root privileges. Please run with sudo."
+    exit 1
+fi
+
+echo "Downloading kye..."
+if ! curl -fsSL "$KYE_URL" -o "$KYE_PATH"; then
+    echo "Error: Failed to download kye from GitHub."
+    exit 1
+fi
+
+chmod +x "$KYE_PATH"
+
+echo "kye successfully installed in $INSTALL_DIR"
+echo "You can now run 'kye --help' to check usage."
+exit 0
